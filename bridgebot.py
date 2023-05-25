@@ -43,7 +43,7 @@ STATUS_CHANNEL_ID, STATUS_MESSAGE_ID = 851003243755470848, 851005967768616980 # 
 SAVED_LOGS_PATH = "saved.log"
 
 # TODO: Replace this with whatever IP is necessary
-SERVER_IP = "51.81.64.4"
+SERVER_IP = "localhost" #"70.172.34.123"
 
 # TODO: Replace this with whatever login is necessary
 # FTP_ADDRESS = "1569.node.apexhosting.gdn"
@@ -116,7 +116,7 @@ async def on_message(message: disnake.Message):
         return
            
     # First, make sure the message is not from the bot and in the appropriate channel to send to the server
-    if message.channel.id == CHAT_DUMP_CHANNEL_ID and message.author.name != BOT_NAME and str(message.author.discriminator) != BOT_TAG:        
+    if message.channel.id == CHAT_DUMP_CHANNEL_ID and message.author.name != BOT_NAME and str(message.author.discriminator) != BOT_TAG:      
         
         sender_name = message.author.name
         
@@ -134,8 +134,9 @@ async def on_message(message: disnake.Message):
         try:
             with MCRcon(MCRCON_IP, MCRCON_PASSWORD) as mcr:
                 response = mcr.command(command)
-        except Exception:
+        except Exception as error:
             print("Error trying to RCON to server. Cannot display Discord message in Minecraft chat")
+            print(error)
             pass
 
 #Storing information outside of loop so the data persists
@@ -263,7 +264,7 @@ def update_logs() -> Tuple[str, str]:
             saved_logs = saved_logs_file.readlines()
         
         # Strip newline character from the end of every line in saved_logs
-        saved_logs = [log.rstrip("\n") for log in saved_logs]
+        # saved_logs = [log.rstrip("\n") for log in saved_logs]
 
         # Use Differ to check which lines in latest_logs are new
         differ = difflib.Differ()
@@ -294,6 +295,7 @@ def update_logs() -> Tuple[str, str]:
                 if len(message) > 32:
                     print(message[32:])
                 """
+                
                 if player in message and (message[32:].startswith(player) or message[32:].startswith(f" {player}") or message[32:].startswith(f" <{player}>") or message[32:].startswith(f" * {player}")):
                     # Add exceptions as necessary
                     # Exception 1: messages like '[08:20:33] [Server thread/INFO]: PikaGoku[/###.###.###.###:60959] logged in with entity id 4526 at (8.634433988285775, 106.0, 99.4292995068352)'
@@ -309,7 +311,7 @@ def update_logs() -> Tuple[str, str]:
             
         # Save new logs
         with open(SAVED_LOGS_PATH, 'w') as saved_logs_file:
-            saved_logs_file.write("\n".join(latest_logs))
+            saved_logs_file.write("".join(latest_logs))
 
     except Exception as error:
         print("Error in the process of analyzing which logs are new")
