@@ -46,9 +46,11 @@ SAVED_LOGS_PATH = "saved.log"
 SERVER_IP = "51.81.64.4"
 
 # TODO: Replace this with whatever login is necessary
-FTP_ADDRESS = "1569.node.apexhosting.gdn"
-FTP_USER = "PikaGoku.1348505"
-FTP_PASSWORD = "U65.cjK47G#exU"
+# FTP_ADDRESS = "1569.node.apexhosting.gdn"
+# FTP_USER = "PikaGoku.1348505"
+# FTP_PASSWORD = "U65.cjK47G#exU"
+
+SERVER_LOGS_FOLDER = "/home/samihan/Documents/Minecraft/Newer Heights Server/logs/"
 
 # TODO: Replace these with actual values
 MCRCON_IP = SERVER_IP
@@ -245,10 +247,15 @@ def update_logs() -> Tuple[str, str]:
         latest_logs:list[str] = []
         saved_logs:list[str] = []
 
-        with FTP(SERVER_IP) as ftp:
-            ftp.login(user=FTP_USER, passwd=FTP_PASSWORD)
-            # TODO: This command/path probably needs to change if I use a different server host
-            ftp.retrlines("RETR /default/logs/latest.log", latest_logs.append)
+        # with FTP(SERVER_IP) as ftp:
+        #     ftp.login(user=FTP_USER, passwd=FTP_PASSWORD)
+        #     # TODO: This command/path probably needs to change if I use a different server host
+        #     ftp.retrlines("RETR /default/logs/latest.log", latest_logs.append)
+
+        LATEST_LOG_FILE = SERVER_LOGS_FOLDER + "/latest.log"
+
+        with open(LATEST_LOG_FILE, "r") as file:
+            latest_logs = file.readlines()
 
         with open(SAVED_LOGS_PATH, 'a+') as saved_logs_file:
             # Returning the the top of the old log file because opening in a+ puts the pointer at the end
