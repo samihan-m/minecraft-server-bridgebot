@@ -6,6 +6,7 @@ import os
 import asyncio
 import difflib
 import logging
+import aiofiles
 
 class BotServerBridge:
     bot_wrapper: DiscordBotWrapper
@@ -13,13 +14,15 @@ class BotServerBridge:
     server: observer.Server
     server_observation_loop_interval_seconds: int
     previous_server_response: observer.ServerResponse | None
+    processed_server_logs_file_name: str
 
-    def __init__(self, bot_wrapper: DiscordBotWrapper, discord_token: str, server: observer.Server, server_observation_loop_interval_seconds: int) -> None:
+    def __init__(self, bot_wrapper: DiscordBotWrapper, discord_token: str, server: observer.Server, server_observation_loop_interval_seconds: int, processed_server_logs_file_name: str) -> None:
         self.bot_wrapper = bot_wrapper
         self.discord_token = discord_token
         self.server = server
         self.server_observation_loop_interval_seconds = server_observation_loop_interval_seconds
         self.previous_server_response = None
+        self.processed_server_logs_file_name = processed_server_logs_file_name
 
     @staticmethod
     def extract_new_logs(current_logs: list[str], previous_logs: list[str]) -> list[str]:
@@ -44,6 +47,12 @@ class BotServerBridge:
         """
         chat_logs: list[str] = []
 
+        def trim_server_info_log(server_log: str) -> str:
+            """From a server info log, trims the contents to remove the `[Server thread/INFO]: ` prefix and returns it"""
+            log_contents: str = ""
+            log_contents = server_log.split("[Server thread/INFO]: ")[1]
+            return log_contents
+
         for log in server_logs:
             if "[Server thread/INFO]:" not in log:
                 continue
@@ -51,98 +60,103 @@ class BotServerBridge:
             # It's hard to intelligently capture all messages
             # It's easier to exclude messages, so we'll do that
 
+            # Trimming log early because it is probably better if there are less characters in each message to linearly scan through
+            trimmed_log = trim_server_info_log(log)
+
             # Excluding certain non-player messages
-            if ("<" in log and ">" in log) is False:
+            if ("<" in trimmed_log and ">" in trimmed_log) is False:
                 # [13:13:49] [Server thread/INFO]: PikaGoku lost connection: Disconnected
-                if "lost connection" in log:
+                if "lost connection" in trimmed_log:
                     continue
                 # [13:14:12] [Server thread/INFO]: PikaGoku[/83.221.231.202:1342] logged in with entity id 511 at (-9.837644089959465, 124.0, 100.14206735043899)
-                if "logged in with entity id" in log:
+                if "logged in with entity id" in trimmed_log:
                     continue
                 # [13:22:08] [Server thread/INFO]: There are 1 of a max of 30 players online: PikaGoku
-                if "There are" in log and "a max of" in log and "players online" in log:
+                if "There are" in trimmed_log and "a max of" in trimmed_log and "players online" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: [Dynmap] Added 18 custom biome mappings
-                if "[Dynmap]" in log:
+                if "[Dynmap]" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: Starting minecraft server version 1.18.2
-                if "Starting minecraft server" in log:
+                if "Starting minecraft server" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: Loading properties
-                if "Loading properties" in log:
+                if "Loading properties" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: Default game type: SURVIVAL
-                if "Default game type:" in log:
+                if "Default game type:" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: Generating keypair
-                if "Generating keypair" in log:
+                if "Generating keypair" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: Starting Minecraft server on 51.81.64.4:25565
-                if "Starting Minecraft server" in log:
+                if "Starting Minecraft server" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: Using epoll channel type
-                if "channel type" in log:
+                if "channel type" in trimmed_log:
                     continue
                 # [12:54:39] [Server thread/INFO]: Preparing level "fabric_1_18_2_1755343"
-                if "Preparing level" in log:
+                if "Preparing level" in trimmed_log:
                     continue
                 # [12:54:48] [Server thread/INFO]: Preparing start region for dimension minecraft:overworld
-                if "Preparing start region" in log:
+                if "Preparing start region" in trimmed_log:
                     continue
                 # [12:54:57] [Server thread/INFO]: Time elapsed: 8900 ms
-                if "Time elapsed:" in log:
+                if "Time elapsed:" in trimmed_log:
                     continue
                 # [12:54:57] [Server thread/INFO]: Done (17.860s)! For help, type "help"
-                if "For help, type" in log:
+                if "For help, type" in trimmed_log:
                     continue
                 # [12:54:57] [Server thread/INFO]: Starting GS4 status listener
-                if "status listener" in log:
+                if "status listener" in trimmed_log:
                     continue
                 # [12:54:57] [Server thread/INFO]: Thread Query Listener started
-                if "Thread Query Listener" in log:
+                if "Thread Query Listener" in trimmed_log:
                     continue                        
                 # [12:54:57] [Server thread/INFO]: Starting remote control listener
-                if "Starting remote control listener" in log:
+                if "Starting remote control listener" in trimmed_log:
                     continue
                 # [12:54:57] [Server thread/INFO]: Thread RCON Listener started
-                if "Thread RCON Listener" in log:
+                if "Thread RCON Listener" in trimmed_log:
                     continue
                 # [12:54:57] [Server thread/INFO]: RCON running on 51.81.64.4:25575
-                if "RCON running on" in log:
+                if "RCON running on" in trimmed_log:
                     continue
                 # [16:48:04] [Server thread/INFO]: Unknown or incomplete command, see below for error
-                if "Unknown or incomplete command" in log:
+                if "Unknown or incomplete command" in trimmed_log:
                     continue
                 # [16:48:04] [Server thread/INFO]: STOP<--[HERE]
-                if "[HERE]" in log:
+                if "[HERE]" in trimmed_log:
                     continue
                 # [16:48:06] [Server thread/INFO]: Stopping the server
-                if "Stopping the server" in log:
+                if "Stopping the server" in trimmed_log:
                     continue
                 # [16:48:07] [Server thread/INFO]: Stopping server
-                if "Stopping server" in log:
+                if "Stopping server" in trimmed_log:
                     continue
                 # [16:48:07] [Server thread/INFO]: Saving players
-                if "Saving players" in log:
+                if "Saving players" in trimmed_log:
                     continue
                 # [16:48:07] [Server thread/INFO]: Saving worlds
-                if "Saving worlds" in log:
+                if "Saving worlds" in trimmed_log:
                     continue
                 # [16:48:08] [Server thread/INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
-                if "Saving chunks for level" in log:
+                if "Saving chunks for level" in trimmed_log:
                     continue
                 # [16:48:09] [Server thread/INFO]: ThreadedAnvilChunkStorage (world): All chunks are saved
-                if "ThreadedAnvilChunkStorage" in log:
+                if "ThreadedAnvilChunkStorage" in trimmed_log:
+                    continue
+                # [Server thread/INFO]: Made PikaGoku a server operator
+                if "a server operator" in trimmed_log:
+                    continue
+                # [Server thread/INFO]: [PikaGoku: Gave 1 [Acacia Boat] to PikaGoku]
+                # [Server thread/INFO]: [PikaGoku: Killed PikaGoku]
+                # [Server thread/INFO]: [PikaGoku: Killed PikaGoku]
+                # This pattern continues for all operator commands
+                if"[" in trimmed_log and ": " in trimmed_log and "]" in trimmed_log:
                     continue
 
-                def extract_chat_message(server_log: str) -> str:
-                    """From a server log, trims the contents to only be the chat message and returns it"""
-                    chat_message: str = ""
-                    chat_message = server_log.split("[Server thread/INFO]: ")[1]
-                    return chat_message
-
-                chat_message = extract_chat_message(log)
-                chat_logs.append(chat_message)
+                chat_logs.append(trimmed_log)
 
         return chat_logs
         
@@ -186,6 +200,41 @@ class BotServerBridge:
         update_response = await self.bot_wrapper.update_chat_log_display(new_chat_logs)
 
         return update_response
+    
+    async def read_processed_server_logs(self) -> list[str]:
+        """
+        Reads from the file specified by `self.processed_server_logs_file_name` and returns the contents.
+
+        Returns an empty list if the file does not exist.
+        """
+        processed_server_logs: list[str] = []
+
+        try:
+            async with aiofiles.open(self.processed_server_logs_file_name, "r") as processed_server_log_file:
+                processed_server_logs = await processed_server_log_file.readlines()
+        except FileNotFoundError as exception:
+            logging.error(f"Server log file {self.processed_server_logs_file_name} not found! {exception}")
+        except Exception as exception:
+            logging.error(f"Unhandled exception reading from processed server logs file! {exception}")
+
+        return processed_server_logs
+
+    async def write_processed_server_logs(self, latest_server_logs: list[str]) -> bool:
+        """
+        Writes the `latest_server_logs` to the file specified by `self.processed_server_logs_file_name`.
+
+        Returns True if the write was successful, False otherwise.
+        """
+        did_write_successfully = True
+
+        try:
+            async with aiofiles.open(self.processed_server_logs_file_name, "w") as processed_server_log_file:
+                await processed_server_log_file.writelines(latest_server_logs)
+        except Exception as exception:
+            logging.error(f"Unhandled exception writing to processed server logs file! {exception}")
+            did_write_successfully = False
+
+        return did_write_successfully
 
     async def server_observation_loop(self) -> None:
         """
@@ -198,8 +247,10 @@ class BotServerBridge:
             # Get required information from the server response
             previous_server_logs = []
             if self.previous_server_response is None:
-                # TODO: Read the previous server logs from the saved.log file
-                pass
+                # If we have no processed server logs in memory, maybe this script restarted without the server restarting.
+                # If that is the case, we don't want to re-send all the logs in latest.log, so we are keeping a record of what we have sent in a file.
+                # We are reading from that file here.
+                previous_server_logs = await self.read_processed_server_logs()
             elif self.previous_server_response is not None:
                 previous_server_logs = self.previous_server_response.logs_info.server_logs
 
@@ -222,9 +273,14 @@ class BotServerBridge:
             if chat_logs_response is True:
                 logging.debug("Updated chat logs display successfully.")
 
+            # Update the previous_server_response in memory
             self.previous_server_response = server_response
 
-            #TODO: Write server response to saved.log
+            # Write server response to saved.log for persisting a record of what logs we have sent outside of memory.
+            did_write_successfully = await self.write_processed_server_logs(server_response.logs_info.server_logs)
+
+            if did_write_successfully is True:
+                logging.debug("Updated processed server logs file successfully.")
 
         return
 
@@ -241,7 +297,7 @@ class BotServerBridge:
         try:
             await asyncio.gather(start_bot_task, start_observation_loop_task)
         except KeyboardInterrupt:
-            pass
+            logging.info("Received KeyboardInterrupt. Closing bridge...")
         return
 
 def main():
@@ -258,6 +314,7 @@ def main():
     rcon_password = os.environ["RCON_PASSWORD"]
     is_query_enabled = (os.environ["IS_QUERY_ENABLED"].lower() == "true")
     server_log_file_name = f'{os.environ["SERVER_LOGS_FOLDER"]}/latest.log'
+    processed_server_logs_file_name = f'{os.environ["SERVER_LOGS_FOLDER"]}/saved.log'
 
     server = observer.Server(
         ip = server_ip,
@@ -289,7 +346,13 @@ def main():
 
     server_observation_loop_interval_seconds = int(os.environ["SERVER_PING_INTERVAL_SECONDS"])
     
-    bridge = BotServerBridge(bot_wrapper = bot_wrapper, discord_token = discord_token, server = server, server_observation_loop_interval_seconds=server_observation_loop_interval_seconds)
+    bridge = BotServerBridge(
+        bot_wrapper = bot_wrapper,
+        discord_token = discord_token,
+        server = server,
+        server_observation_loop_interval_seconds=server_observation_loop_interval_seconds,
+        processed_server_logs_file_name = processed_server_logs_file_name
+    )
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(bridge.open_bridge())
