@@ -22,3 +22,14 @@ SAVED_LOGS_PATH=saved.log
 
 
 ```
+
+Important things for the `server.properties` file:
+
+```
+rcon.port=<insert RCON_PORT value here>
+enable-query=true
+query.port=<insert SERVER_PORT value here>
+server-port=<insert SERVER_PORT value here>
+enable-rcon=true
+rcon.password=<insert RCON_PASSWORD value here>
+```
