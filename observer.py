@@ -2,7 +2,7 @@
 import mcstatus
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import datetime
 import aiofiles
 from mcrcon import MCRcon
@@ -13,7 +13,7 @@ class ServerStatusResponse:
     is_online: bool = False
     online_player_count: int = -1
     online_player_limit: int = -1
-    online_player_names: list[str] = []
+    online_player_names: list[str] = field(default_factory=list)
     version: str = ""
 
     def is_equal_to(self, other_status_response: "ServerStatusResponse") -> bool:
@@ -36,7 +36,7 @@ class ServerStatusResponse:
 @dataclass
 class ServerLogsResponse:
     timestamp: float
-    server_logs: list[str] = []
+    server_logs: list[str] = field(default_factory=list)
 
     def is_equal_to(self, other_logs_response: "ServerLogsResponse") -> bool:
         """

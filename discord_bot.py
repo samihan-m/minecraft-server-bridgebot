@@ -113,7 +113,7 @@ class DiscordBotWrapper:
                 if status_information.online_player_count == 0:
                     player_list_content = "Nobody is online...\n"
                 else:
-                    player_list_content = "\n".join([f'**{player_name}**' for player_name in status_information.online_player_names])
+                    player_list_content = "Players Online:\n" + "\n".join([f'**{player_name}**' for player_name in status_information.online_player_names])
                 new_message_content += player_list_content
 
             new_message = await status_message.edit(new_message_content)

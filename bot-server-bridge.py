@@ -31,7 +31,7 @@ class BotServerBridge:
 
         # If a line is unique to `current_logs` (the latest log information), it will start with `"- "``
         # Also, remove that "- " while we're iterating over everything anyway
-        new_logs: list[str] = [delta[2:] for delta in log_delta if delta.startswith("- ")]
+        new_logs: list[str] = [delta[2:].rstrip("\n") for delta in log_delta if delta.startswith("- ")]
 
         return new_logs
     
@@ -197,7 +197,10 @@ class BotServerBridge:
 
             # Get required information from the server response
             previous_server_logs = []
-            if self.previous_server_response is not None:
+            if self.previous_server_response is None:
+                # TODO: Read the previous server logs from the saved.log file
+                pass
+            elif self.previous_server_response is not None:
                 previous_server_logs = self.previous_server_response.logs_info.server_logs
 
             new_server_logs = self.extract_new_logs(server_response.logs_info.server_logs, previous_server_logs)
@@ -219,6 +222,10 @@ class BotServerBridge:
             if chat_logs_response is True:
                 logging.debug("Updated chat logs display successfully.")
 
+            self.previous_server_response = server_response
+
+            #TODO: Write server response to saved.log
+
         return
 
     async def open_bridge(self) -> None:
@@ -228,19 +235,22 @@ class BotServerBridge:
         This is "starting" everything.
         """
 
-        event_loop = asyncio.get_event_loop()
-        asyncio.ensure_future(self.bot_wrapper.discord_bot.start(self.discord_token))
-        asyncio.ensure_future(self.server_observation_loop())
+        start_bot_task = asyncio.create_task(self.bot_wrapper.discord_bot.start(self.discord_token))
+        start_observation_loop_task = asyncio.create_task(self.server_observation_loop())
+
         try:
-            event_loop.run_forever()
+            await asyncio.gather(start_bot_task, start_observation_loop_task)
         except KeyboardInterrupt:
             pass
-        finally:
-            event_loop.close()
         return
 
-async def main():
+def main():
+    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
+
     load_dotenv(".env")
+
+    logging.info("Loaded .env file.")
+    logging.debug(os.environ)
 
     server_ip = os.environ["SERVER_IP"]
     port = int(os.environ["SERVER_PORT"])
@@ -281,8 +291,10 @@ async def main():
     
     bridge = BotServerBridge(bot_wrapper = bot_wrapper, discord_token = discord_token, server = server, server_observation_loop_interval_seconds=server_observation_loop_interval_seconds)
 
-    await bridge.open_bridge()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(bridge.open_bridge())
+    loop.close()
     
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
