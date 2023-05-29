@@ -273,14 +273,15 @@ class BotServerBridge:
             if chat_logs_response is True:
                 logging.debug("Updated chat logs display successfully.")
 
-            # Update the previous_server_response in memory
-            self.previous_server_response = server_response
+            # Check if the new server response are different to determine if we should update our records for previous server response
+            if self.previous_server_response is None or self.previous_server_response.is_equal_to(server_response) is False:
+                # Update the previous_server_response in memory
+                self.previous_server_response = server_response
 
-            # Write server response to saved.log for persisting a record of what logs we have sent outside of memory.
-            did_write_successfully = await self.write_processed_server_logs(server_response.logs_info.server_logs)
-
-            if did_write_successfully is True:
-                logging.debug("Updated processed server logs file successfully.")
+                # Write server response to saved.log for persisting a record of what logs we have sent outside of memory.
+                did_write_successfully = await self.write_processed_server_logs(server_response.logs_info.server_logs)
+                if did_write_successfully is True:
+                    logging.debug("Updated processed server logs file successfully.")
 
         return
 
