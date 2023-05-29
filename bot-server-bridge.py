@@ -274,7 +274,7 @@ class BotServerBridge:
                 logging.debug("Updated chat logs display successfully.")
 
             # Check if the new server response are different to determine if we should update our records for previous server response
-            if self.previous_server_response is None or self.previous_server_response.is_equal_to(server_response) is False:
+            if self.previous_server_response is None or (self.previous_server_response.is_equal_to(server_response) is False):
                 # Update the previous_server_response in memory
                 self.previous_server_response = server_response
 

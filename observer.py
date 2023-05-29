@@ -65,8 +65,8 @@ class ServerResponse:
         is_equal = True
 
         if any([
-            self.status_info.is_equal_to(other_server_response.status_info),
-            self.logs_info.is_equal_to(other_server_response.logs_info),
+            self.status_info.is_equal_to(other_server_response.status_info) is False,
+            self.logs_info.is_equal_to(other_server_response.logs_info) is False,
         ]):
             is_equal = False
 
