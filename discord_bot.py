@@ -9,7 +9,9 @@ import logging
 import asyncio
 import typing
 
-bot = Bot(command_prefix="!observer ", intents=disnake.Intents.default())
+bot_intents = disnake.Intents.default()
+bot_intents.message_content = True
+bot = Bot(command_prefix="!observer ", intents=bot_intents)
 bot.remove_command("help")
 
 @bot.event
@@ -33,7 +35,7 @@ class DiscordBotWrapper:
     admin_id: int
     # send_chat_message_callback: typing.Callable[[str, str], typing.Awaitable[bool]]
     send_chat_message_callback: typing.Callable[[str, str], typing.Awaitable[bool]]
-    run_console_command_callback: typing.Callable[[str], typing.Awaitable[bool]]
+    run_console_command_callback: typing.Callable[[str], typing.Awaitable[str | None]]
 
     def __init__(
             self, status_message_channel_id: int,
@@ -43,7 +45,7 @@ class DiscordBotWrapper:
             bot_id: int,
             admin_id: int,
             send_chat_message_callback: typing.Callable[[str, str], typing.Awaitable[bool]],
-            run_console_command_callback: typing.Callable[[str], typing.Awaitable[bool]]
+            run_console_command_callback: typing.Callable[[str], typing.Awaitable[str | None]]
         ) -> None:
         """
         Initializing the DiscordBotWrapper object.
@@ -73,14 +75,21 @@ class DiscordBotWrapper:
         async def on_message(message: disnake.Message) -> None:
             if message.guild is None and message.author.id == self.admin_id:
                 # Run message as a command
-                message_send_response = await self.run_console_command_callback(message.content)
+                console_command_feedback = await self.run_console_command_callback(message.content)
+
+                if console_command_feedback is None:
+                    console_command_feedback = "An error occurred."
                 
-                # NOTE: Maybe do something with the response here
+                try:
+                    response_send_response = await message.channel.send(console_command_feedback)
+                except Exception as exception:
+                    logging.error(f"Unhandled exception when responding to admin's console command direct message: {exception}")
                 return
             
             if message.channel.id == self.chat_dump_channel_id and message.author.id != self.bot_id:
                 # Send message to server
-                message_send_response = await self.send_chat_message_callback(message.author.name, message.content)
+                logging.debug(message)
+                message_send_response = await self.send_chat_message_callback(message.author.name, message.clean_content)
 
                 # NOTE: Maybe do something with the response here?
                 return

@@ -295,10 +295,8 @@ class BotServerBridge:
         start_bot_task = asyncio.create_task(self.bot_wrapper.discord_bot.start(self.discord_token))
         start_observation_loop_task = asyncio.create_task(self.server_observation_loop())
 
-        try:
-            await asyncio.gather(start_bot_task, start_observation_loop_task)
-        except KeyboardInterrupt:
-            logging.info("Received KeyboardInterrupt. Closing bridge...")
+        await asyncio.gather(start_bot_task, start_observation_loop_task)
+        
         return
 
 def main():
@@ -355,9 +353,14 @@ def main():
         processed_server_logs_file_name = processed_server_logs_file_name
     )
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(bridge.open_bridge())
-    loop.close()
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(bridge.open_bridge())
+        loop.close()
+    except KeyboardInterrupt:
+        logging.info("Received KeyboardInterrupt. Closing bridge...")
+
+    return
     
 
 if __name__ == "__main__":

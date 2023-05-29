@@ -212,6 +212,7 @@ class Server:
         did_successfully_send_message = True
 
         command = '/tellraw @a ["",{"text":"' + f"[{sender_name}] " + '","color":"aqua"},{"text":"' + message_contents + '"}]'
+        logging.debug(f"{command}")
 
         try:
             with MCRcon(host=self.ip, port=self.rcon_port, password=self.rcon_password) as mcr:
@@ -222,22 +223,21 @@ class Server:
 
         return did_successfully_send_message
     
-    async def run_console_command(self, command: str) -> bool:
+    async def run_console_command(self, command: str) -> str | None:
         """
         Attempts to use RCON to send a console command to the server.
 
-        Returns True is successful, False if not.
+        Returns the response, or None if something went wrong.
         """
-        did_successfully_send_message = True
+        response = None
 
         try:
             with MCRcon(host=self.ip, port=self.rcon_port, password=self.rcon_password) as mcr:
                 response = mcr.command(command)
         except Exception as exception:
-            did_successfully_send_message = False
             logging.error(f"Unhandled exception sending a chat message to the server: {exception}")
 
-        return did_successfully_send_message
+        return response
 
 if __name__ == "__main__":
     server = Server("70.172.34.123", "interc3pt", r"D:/Samihan/Documents/Programming/Python Projects/Remote Minecraft Bridgebot/logs")
