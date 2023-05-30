@@ -238,7 +238,4 @@ class Server:
             logging.error(f"Unhandled exception sending a chat message to the server: {exception}")
 
         return response
-
-if __name__ == "__main__":
-    server = Server("70.172.34.123", "interc3pt", r"D:/Samihan/Documents/Programming/Python Projects/Remote Minecraft Bridgebot/logs")
-    asyncio.run(server.ping_server())
+    
