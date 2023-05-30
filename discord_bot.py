@@ -25,16 +25,19 @@ async def on_ready() -> None:
     print(f"Running on: {platform.system()} {platform.release()} ({os.name})")
     print("-------------------")
 
-@bot.command
-async def hello(ctx: Context) -> None:
+@bot.slash_command(name="create_status_display_message", description="Sends a message in this channel that can be used as the status display message.")
+async def create_status_message(interaction: disnake.ApplicationCommandInteraction) -> None:
     """
-    A command that simply responds with a "Hello" in the chat.
+    A command that responds in the channel with a message that can be used as the status display message.
 
     This is useful for getting the bot to send a message it can later edit as the status display message.
     """
 
     try:
-        await ctx.send("Hello")
+        await asyncio.gather(
+            interaction.response.send_message("Creating status display message... (feel free to delete this)"),
+            interaction.channel.send("Status Display Message Filler (Enable developer mode in Discord settings, right click me, and copy my ID for use in configuring the bridge bot!)")
+        )
     except Exception as exception:
         logging.error(f"Unhandled exception sending 'Hello': {exception}")
 
