@@ -1,5 +1,5 @@
 import disnake
-from disnake.ext.commands import Bot
+from disnake.ext.commands import Bot, Context
 from disnake.channel import TextChannel
 from disnake.message import Message
 import platform
@@ -24,6 +24,19 @@ async def on_ready() -> None:
     print(f"Python version: {platform.python_version()}")
     print(f"Running on: {platform.system()} {platform.release()} ({os.name})")
     print("-------------------")
+
+@bot.command
+async def hello(ctx: Context) -> None:
+    """
+    A command that simply responds with a "Hello" in the chat.
+
+    This is useful for getting the bot to send a message it can later edit as the status display message.
+    """
+
+    try:
+        await ctx.send("Hello")
+    except Exception as exception:
+        logging.error(f"Unhandled exception sending 'Hello': {exception}")
 
 class DiscordBotWrapper:
     discord_bot: Bot
