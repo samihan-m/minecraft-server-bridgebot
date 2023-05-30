@@ -55,3 +55,7 @@ Edit the `server.properties` file to match.
 Lastly, run the program via:
 
 `python bot_server_bridge.py`
+
+If you want to run it in debug mode,
+
+`python bot_server_bridge.py --debug`

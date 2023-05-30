@@ -7,6 +7,8 @@ import asyncio
 import difflib
 import logging
 import aiofiles
+import argparse
+from dataclasses import dataclass
 
 class BotServerBridge:
     bot_wrapper: DiscordBotWrapper
@@ -298,9 +300,23 @@ class BotServerBridge:
         await asyncio.gather(start_bot_task, start_observation_loop_task)
         
         return
+    
+@dataclass
+class ProgramArguments:
+    is_debug_mode: bool
 
 def main():
-    logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
+    argument_parser = argparse.ArgumentParser(
+        prog="Minecraft Server Discord Bridge Bot",
+        description="Opens a bridge between a Minecraft server, its console, and its chat, and a few Discord channels."
+    )
+    argument_parser.add_argument("--debug", action="store_true", dest="is_debug_mode")
+
+    # Thanks to https://stackoverflow.com/a/71035314
+    program_arguments = ProgramArguments(**vars(argument_parser.parse_args()))
+
+    if program_arguments.is_debug_mode is True:
+        logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.DEBUG)
 
     load_dotenv(".env")
 
