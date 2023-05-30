@@ -39,6 +39,10 @@ SERVER_LOGS_FOLDER=/home/samihan/Documents/Minecraft/Summer23/logs/
 
 Edit each line to have the appropriate values.
 
+To come up with the value for the `STATUS_MESSAGE_ID`, use the `/create_status_display_message` command offered by the Discord bot
+in the channel in which you want the status message to be. Copy the response message's ID for `STATUS_MESSAGE_ID`, and copy the ID of the channel
+the message is in for the value of `STATUS_CHANNEL_ID`.  
+
 Important things for the `server.properties` file:
 
 ```
