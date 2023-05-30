@@ -54,4 +54,4 @@ Edit the `server.properties` file to match.
 
 Lastly, run the program via:
 
-`python bot-server-bridge.py`
+`python bot_server_bridge.py`
