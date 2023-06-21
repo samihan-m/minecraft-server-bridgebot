@@ -9,6 +9,7 @@ import logging
 import aiofiles
 import argparse
 from dataclasses import dataclass
+import re
 
 class BotServerBridge:
     bot_wrapper: DiscordBotWrapper
@@ -56,7 +57,11 @@ class BotServerBridge:
             return log_contents
 
         for log in server_logs:
+            # Replace all IP-address looking things 
+            log = re.sub('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', "###.###.###.###", log)
+
             if "[Server thread/INFO]:" not in log:
+                logging.debug(f"Skipping chat log {log} as it is not from the INFO server thread")
                 continue
 
             # It's hard to intelligently capture all messages
@@ -67,6 +72,7 @@ class BotServerBridge:
 
             # Excluding certain non-player messages
             if ("<" in trimmed_log and ">" in trimmed_log) is False:
+                logging.debug(f"< or > not found in '{trimmed_log}'")
                 # [13:13:49] [Server thread/INFO]: PikaGoku lost connection: Disconnected
                 if "lost connection" in trimmed_log:
                     continue
@@ -158,7 +164,8 @@ class BotServerBridge:
                 if"[" in trimmed_log and ": " in trimmed_log and "]" in trimmed_log:
                     continue
 
-                chat_logs.append(trimmed_log)
+                logging.debug(f"Added {trimmed_log} to log of new chat logs")
+            chat_logs.append(trimmed_log)
 
         return chat_logs
         
